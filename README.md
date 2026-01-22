@@ -1,5 +1,7 @@
 # SparkFusionAd SDK
 
+[![](https://jitpack.io/v/Spark-Fusion/SparkFusionAD.svg)](https://jitpack.io/#Spark-Fusion/SparkFusionAD)
+
 一个轻量级的 Android 广告测试 SDK，支持多种广告类型，帮助开发者快速集成广告功能。
 
 ## 功能特性
@@ -20,13 +22,53 @@
 
 ### 1. 添加依赖
 
-在项目的 `build.gradle.kts` 中添加：
+#### Step 1: 添加 JitPack 仓库
+
+在项目的 `settings.gradle.kts` 中添加 JitPack 仓库：
+
+```kotlin
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+        maven { url = uri("https://jitpack.io") }
+    }
+}
+```
+
+如果使用 `settings.gradle`（Groovy），添加：
+
+```groovy
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+        maven { url 'https://jitpack.io' }
+    }
+}
+```
+
+#### Step 2: 添加依赖
+
+在模块的 `build.gradle.kts` 中添加：
 
 ```kotlin
 dependencies {
-    implementation("com.sparkfusionad.sdk:SparkFusionAd:1.0.0")
+    implementation("com.github.Spark-Fusion:SparkFusionAD:1.0.0")
 }
 ```
+
+如果使用 `build.gradle`（Groovy），添加：
+
+```groovy
+dependencies {
+    implementation 'com.github.Spark-Fusion:SparkFusionAD:1.0.0'
+}
+```
+
+**JitPack 地址**: [https://jitpack.io/#Spark-Fusion/SparkFusionAD/1.0.0](https://jitpack.io/#Spark-Fusion/SparkFusionAD/1.0.0)
 
 ### 2. 初始化 SDK
 
