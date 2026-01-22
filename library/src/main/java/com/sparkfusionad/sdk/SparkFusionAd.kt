@@ -19,7 +19,6 @@ import kotlin.random.Random
 
 object SparkFusionAd {
 
-    
     private val TAG = "SparkFusionAd"
     private var isInitAd: Boolean = false
     private var context: Context? = null
