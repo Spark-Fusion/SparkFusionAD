@@ -3,10 +3,11 @@ package com.sparkfusionad.app
 import android.os.Bundle
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
+import com.sparkfusionad.app.config.Common
 import com.sparkfusionad.app.databinding.ActivityMainBinding
 import com.sparkfusionad.sdk.SparkFusionAd
+import com.sparkfusionad.sdk.SparkFusionAdLoadListener
+import com.sparkfusionad.sdk.SparkFusionAdShowListener
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
@@ -15,9 +16,43 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         enableEdgeToEdge()
         setContentView(binding.root)
-        SparkFusionAd.showSFBannerAd(binding.fl)
+        SparkFusionAd.loadSFBannerAd(
+            context = this,
+            adId = Common.POS_ID_BANNER,
+            listener = SparkFusionAdLoadListener(
+                onAdLoadSuccess = {
+                    SparkFusionAd.showSFBannerAd(
+                        binding.fl,
+                        SparkFusionAdShowListener(
+                            onAdShowSuccess = {},
+                            onAdShowFailure = {},
+                            onAdClick = {},
+                            onAdClose = {}
+                        )
+                    )
+                },
+                onAdLoadFailure = {}
+            )
+        )
         binding.button.setOnClickListener {
-            SparkFusionAd.showSFInterstitialAd( this,1, true)
+            SparkFusionAd.loadSFInterstitialAd(
+                context = this,
+                adId = Common.POS_ID_Insert,
+                listener = SparkFusionAdLoadListener(
+                    onAdLoadSuccess = {
+                        SparkFusionAd.showSFInterstitialAd(
+                            this,
+                            SparkFusionAdShowListener(
+                                onAdShowSuccess = {},
+                                onAdShowFailure = {},
+                                onAdClick = {},
+                                onAdClose = {}
+                            )
+                        )
+                    },
+                    onAdLoadFailure = {}
+                )
+            )
         }
         binding.button2.setOnClickListener {
             SparkFusionAd.showSFVideoAd( this, true, onAdLoadSuccess = {}, onAdLoadError = {}, onAdClose = {})

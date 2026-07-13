@@ -6,8 +6,11 @@ import android.os.CountDownTimer
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import com.sparkfusionad.app.application.SdkManager
+import com.sparkfusionad.app.config.Common
 import com.sparkfusionad.app.databinding.ActivityStartBinding
 import com.sparkfusionad.sdk.SparkFusionAd
+import com.sparkfusionad.sdk.SparkFusionAdLoadListener
+import com.sparkfusionad.sdk.SparkFusionAdShowListener
 import com.wdit.shrmtfx.dcllk.kllcd.config.AppConfig
 import com.sparkfusionad.app.R
 import com.sparkfusionad.app.dialog.DialogHelper
@@ -34,13 +37,8 @@ class StartActivity : AppCompatActivity(){
                         WebViewActivity.start(this, title, url)
                     },
                     onAgree = {
-                        //展示弹窗以及设置为false
-                        //SdkManager.initBmob()
                         if(SdkManager.initAd()){
-                            SparkFusionAd.loadSFSplashAd( this)
-                            SparkFusionAd.showSFSplashAd(binding.fl, {
-                                startActivity()
-                            })
+                            loadAndShowSplashAd()
                         }else{
                             countdown()
                         }
@@ -52,12 +50,8 @@ class StartActivity : AppCompatActivity(){
             }
             //}
         } else {
-            //初始化插屏广告
             if(SdkManager.initAd()){
-                SparkFusionAd.loadSFSplashAd( this)
-                SparkFusionAd.showSFSplashAd(binding.fl, {
-                    startActivity()
-                })
+                loadAndShowSplashAd()
             }else{
                 countdown()
             }
@@ -67,6 +61,28 @@ class StartActivity : AppCompatActivity(){
 
 
     }
+
+    private fun loadAndShowSplashAd() {
+        SparkFusionAd.loadSFSplashAd(
+            context = this,
+            adId = Common.POS_ID_Splash,
+            listener = SparkFusionAdLoadListener(
+                onAdLoadSuccess = {
+                    SparkFusionAd.showSFSplashAd(
+                        binding.fl,
+                        SparkFusionAdShowListener(
+                            onAdShowSuccess = {},
+                            onAdShowFailure = { countdown() },
+                            onAdClick = {},
+                            onAdClose = { startActivity() }
+                        )
+                    )
+                },
+                onAdLoadFailure = { countdown() }
+            )
+        )
+    }
+
     //倒计时
     private fun countdown() {
         val timer: CountDownTimer = object : CountDownTimer(

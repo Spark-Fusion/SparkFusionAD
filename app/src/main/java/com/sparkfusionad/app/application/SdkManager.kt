@@ -1,5 +1,6 @@
 package com.sparkfusionad.app.application
 
+import com.sparkfusionad.app.config.Common
 import com.sparkfusionad.sdk.SparkFusionAd
 
 
@@ -15,7 +16,10 @@ object SdkManager {
      */
     fun initAd(): Boolean {
         try {
-            SparkFusionAd.initSparkFusionAd(AppContextHolder.getApplication())
+            SparkFusionAd.initSparkFusionAd(
+                AppContextHolder.getApplication(),
+                Common.AppKey
+            )
             return true
         }catch (e:Exception){
             //Log.d(TAG, "initAd Error:${e} ")

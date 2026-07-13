@@ -82,7 +82,10 @@ import com.sparkfusionad.sdk.SparkFusionAd
 class MyApplication : Application() {
     override fun onCreate() {
         super.onCreate()
-        SparkFusionAd.initSparkFusionAd(this)
+        SparkFusionAd.initSparkFusionAd(
+            this,
+            "你的 AppKey"
+        )
     }
 }
 ```
@@ -141,7 +144,10 @@ object SdkManager {
      */
     fun initAd(): Boolean {
         return try {
-            SparkFusionAd.initSparkFusionAd(AppContextHolder.getApplication())
+            SparkFusionAd.initSparkFusionAd(
+                AppContextHolder.getApplication(),
+                "你的 AppKey"
+            )
             true
         } catch (e: Exception) {
             false
@@ -155,7 +161,7 @@ object SdkManager {
 ```kotlin
 if (SdkManager.initAd()) {
     // 初始化成功，可以使用广告功能
-    SparkFusionAd.loadSFSplashAd(context)
+    SparkFusionAd.loadSFSplashAd(context, "开屏广告位id")
 } else {
     // 初始化失败，处理错误
 }
@@ -167,14 +173,29 @@ if (SdkManager.initAd()) {
 
 ```kotlin
 // 加载开屏广告
-SparkFusionAd.loadSFSplashAd(context)
-
-// 显示开屏广告
-val splashContainer = findViewById<ViewGroup>(R.id.splash_container)
-SparkFusionAd.showSFSplashAd(splashContainer) {
-    // 广告关闭后的回调
-    // 跳转到主界面
-}
+SparkFusionAd.loadSFSplashAd(
+    context = context,
+    adId = "开屏广告位id",
+    listener = SparkFusionAdLoadListener(
+        onAdLoadSuccess = {
+            val splashContainer = findViewById<ViewGroup>(R.id.splash_container)
+            SparkFusionAd.showSFSplashAd(
+                splashContainer,
+                SparkFusionAdShowListener(
+                    onAdShowSuccess = {},
+                    onAdShowFailure = {},
+                    onAdClick = {},
+                    onAdClose = {
+                        // 跳转到主界面
+                    }
+                )
+            )
+        },
+        onAdLoadFailure = {
+            // 广告加载失败
+        }
+    )
+)
 ```
 
 #### Banner 广告
@@ -182,8 +203,24 @@ SparkFusionAd.showSFSplashAd(splashContainer) {
 ```kotlin
 val bannerContainer = findViewById<ViewGroup>(R.id.banner_container)
 
-// 显示 Banner 广告
-SparkFusionAd.showSFBannerAd(bannerContainer)
+SparkFusionAd.loadSFBannerAd(
+    context = this,
+    adId = "Banner广告位id",
+    listener = SparkFusionAdLoadListener(
+        onAdLoadSuccess = {
+            SparkFusionAd.showSFBannerAd(
+                bannerContainer,
+                SparkFusionAdShowListener(
+                    onAdShowSuccess = {},
+                    onAdShowFailure = {},
+                    onAdClick = {},
+                    onAdClose = {}
+                )
+            )
+        },
+        onAdLoadFailure = {}
+    )
+)
 
 // 移除 Banner 广告
 SparkFusionAd.removeSFBannerAd(bannerContainer)
@@ -192,13 +229,23 @@ SparkFusionAd.removeSFBannerAd(bannerContainer)
 #### 插屏广告
 
 ```kotlin
-SparkFusionAd.showSFInterstitialAd(
-    activity = this,
-    probability = 5,  // 1/5 的概率显示广告
-    showAd = true,
-    onAdClose = {
-        // 广告关闭后的回调
-    }
+SparkFusionAd.loadSFInterstitialAd(
+    context = this,
+    adId = "插屏广告位id",
+    listener = SparkFusionAdLoadListener(
+        onAdLoadSuccess = {
+            SparkFusionAd.showSFInterstitialAd(
+                this,
+                SparkFusionAdShowListener(
+                    onAdShowSuccess = {},
+                    onAdShowFailure = {},
+                    onAdClick = {},
+                    onAdClose = {}
+                )
+            )
+        },
+        onAdLoadFailure = {}
+    )
 )
 ```
 
@@ -225,42 +272,55 @@ SparkFusionAd.showSFVideoAd(
 
 ### 初始化
 
-#### `initSparkFusionAd(context: Context)`
+#### `initSparkFusionAd(context: Context, appKey: String)`
 
 初始化 SparkFusionAd SDK。
 
 **参数：**
 - `context`: 应用上下文
+- `appKey`: FreelyBase AppKey
 
 ---
 
 ### 开屏广告
 
-#### `loadSFSplashAd(context: Context)`
+#### `loadSFSplashAd(context: Context, adId: String, listener: SparkFusionAdLoadListener)`
 
 加载开屏广告。
 
 **参数：**
 - `context`: 上下文
+- `adId`: 开屏广告位 id
+- `listener`: 加载成功/失败监听
 
-#### `showSFSplashAd(view: ViewGroup, onAdClose: () -> Unit)`
+#### `showSFSplashAd(view: ViewGroup, listener: SparkFusionAdShowListener)`
 
 显示开屏广告。
 
 **参数：**
 - `view`: 用于显示广告的容器视图
-- `onAdClose`: 广告关闭后的回调（默认显示 2.5 秒后自动关闭）
+- `listener`: 展示成功、展示失败、点击、关闭监听
 
 ---
 
 ### Banner 广告
 
-#### `showSFBannerAd(view: ViewGroup)`
+#### `loadSFBannerAd(context: Context, adId: String, listener: SparkFusionAdLoadListener)`
+
+加载 Banner 广告。
+
+**参数：**
+- `context`: 上下文
+- `adId`: Banner 广告位 id
+- `listener`: 加载成功/失败监听
+
+#### `showSFBannerAd(view: ViewGroup, listener: SparkFusionAdShowListener)`
 
 显示 Banner 广告。
 
 **参数：**
 - `view`: 用于显示广告的容器视图
+- `listener`: 展示成功、展示失败、点击、关闭监听
 
 #### `removeSFBannerAd(view: ViewGroup)`
 
@@ -273,15 +333,22 @@ SparkFusionAd.showSFVideoAd(
 
 ### 插屏广告
 
-#### `showSFInterstitialAd(activity: Activity, probability: Int = 5, showAd: Boolean = true, onAdClose: () -> Unit = {})`
+#### `loadSFInterstitialAd(context: Context, adId: String, listener: SparkFusionAdLoadListener)`
+
+加载插屏广告。
+
+**参数：**
+- `context`: 上下文
+- `adId`: 插屏广告位 id
+- `listener`: 加载成功/失败监听
+
+#### `showSFInterstitialAd(activity: Activity, listener: SparkFusionAdShowListener)`
 
 显示插屏广告。
 
 **参数：**
 - `activity`: Activity 上下文
-- `probability`: 显示概率，1/probability（例如：5 表示 1/5 的概率，默认值为 5）
-- `showAd`: 是否显示广告（默认值为 true）
-- `onAdClose`: 广告关闭后的回调（默认显示 3 秒后自动关闭）
+- `listener`: 展示成功、展示失败、点击、关闭监听
 
 ---
 
@@ -362,4 +429,3 @@ SparkFusionADSDK/
 ---
 
 **SparkFusionAd SDK** - 让广告集成更简单 🚀
-
