@@ -12,5 +12,5 @@ object Common {
     //插屏
     const val POS_ID_Insert: String = "4776f4b374"
     //激励视频
-    const val POS_ID_REWARD: String = "3466737898328558"
+    const val POS_ID_REWARD: String = "eb8c1be888"
 }

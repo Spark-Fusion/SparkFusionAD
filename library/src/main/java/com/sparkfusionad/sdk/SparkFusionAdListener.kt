@@ -11,3 +11,11 @@ data class SparkFusionAdShowListener(
     val onAdClick: () -> Unit = {},
     val onAdClose: () -> Unit = {}
 )
+
+data class SparkFusionRewardAdShowListener(
+    val onAdShowSuccess: () -> Unit = {},
+    val onAdShowFailure: (Throwable) -> Unit = {},
+    val onAdClick: () -> Unit = {},
+    val onAdClose: () -> Unit = {},
+    val onReward: () -> Unit = {}
+)

@@ -12,6 +12,7 @@ class Addata: FreelyObject() {
     var content:String?=null//内容
     var applogo: FreelyFile?=null//应用logo
     var promotional: FreelyFile?=null//宣传图
+    var video: FreelyFile?=null//激励广告视频
     var version:String?=null//版本
     var isDownload: Boolean?=null//是否下载（true为下载，false为直接打开链接）
     var url:String?=null//链接

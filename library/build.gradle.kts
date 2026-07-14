@@ -35,6 +35,12 @@ android {
 
 dependencies {
     implementation("com.github.freelybase:freelybase-android:1.2.4")
+
+    // ExoPlayer 核心库
+    implementation("androidx.media3:media3-exoplayer:1.9.4")
+    // UI 组件库，包含 PlayerView
+    implementation("androidx.media3:media3-ui:1.9.4")
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)

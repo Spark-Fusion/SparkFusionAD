@@ -7,6 +7,7 @@ import com.sparkfusionad.app.config.Common
 import com.sparkfusionad.app.databinding.ActivityMainBinding
 import com.sparkfusionad.sdk.SparkFusionAd
 import com.sparkfusionad.sdk.SparkFusionAdLoadListener
+import com.sparkfusionad.sdk.SparkFusionRewardAdShowListener
 import com.sparkfusionad.sdk.SparkFusionAdShowListener
 
 class MainActivity : AppCompatActivity() {
@@ -55,7 +56,25 @@ class MainActivity : AppCompatActivity() {
             )
         }
         binding.button2.setOnClickListener {
-            SparkFusionAd.showSFVideoAd( this, true, onAdLoadSuccess = {}, onAdLoadError = {}, onAdClose = {})
+            SparkFusionAd.loadSFVideoAd(
+                context = this,
+                adId = Common.POS_ID_REWARD,
+                listener = SparkFusionAdLoadListener(
+                    onAdLoadSuccess = {
+                        SparkFusionAd.showSFVideoAd(
+                            activity = this,
+                            listener = SparkFusionRewardAdShowListener(
+                                onAdShowSuccess = {},
+                                onAdShowFailure = {},
+                                onAdClick = {},
+                                onAdClose = {},
+                                onReward = {}
+                            )
+                        )
+                    },
+                    onAdLoadFailure = {}
+                )
+            )
         }
 
     }

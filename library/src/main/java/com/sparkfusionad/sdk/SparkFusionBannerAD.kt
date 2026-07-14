@@ -1,6 +1,9 @@
 package com.sparkfusionad.sdk
 
 import android.content.Context
+import android.animation.ObjectAnimator
+import android.animation.PropertyValuesHolder
+import android.animation.ValueAnimator
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.ImageView
@@ -28,8 +31,23 @@ internal class SparkFusionBannerAD {
             text = adData.callToAction
             setOnClickListener { onActionClick() }
         }
+        startScaleAnimation(view.findViewById(R.id.download))
         view.findViewById<ImageView>(R.id.close).setOnClickListener { onClose() }
 
         return view
+    }
+
+    private fun startScaleAnimation(view: View?) {
+        if (view == null) {
+            return
+        }
+        val scaleX = PropertyValuesHolder.ofFloat(View.SCALE_X, 1f, 1.08f)
+        val scaleY = PropertyValuesHolder.ofFloat(View.SCALE_Y, 1f, 1.08f)
+        ObjectAnimator.ofPropertyValuesHolder(view, scaleX, scaleY).apply {
+            duration = 650L
+            repeatCount = ValueAnimator.INFINITE
+            repeatMode = ValueAnimator.REVERSE
+            start()
+        }
     }
 }

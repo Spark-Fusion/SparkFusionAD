@@ -14,6 +14,11 @@ object SparkFusingAdDataRep {
 
     private const val TAG = "SparkFusingAdDataRep"
 
+    data class AdSpaceResult(
+        val enableSelfAd: Boolean,
+        val ads: MutableList<Addata>
+    )
+
     //获取开屏广告数据
     fun getSplashAdMutableList(
         splashId: String,
@@ -39,6 +44,84 @@ object SparkFusingAdDataRep {
         onFailure: (Throwable) -> Unit = {}
     ) {
         getAdMutableList(insertId, onSuccess, onFailure)
+    }
+
+    fun getRewardAdMutableList(
+        rewardId: String,
+        onSuccess: (MutableList<Addata>) -> Unit,
+        onFailure: (Throwable) -> Unit = {}
+    ) {
+        getAdMutableList(rewardId, onSuccess, onFailure)
+    }
+
+    fun getSplashAdSpaceResult(
+        splashId: String,
+        onSuccess: (AdSpaceResult) -> Unit,
+        onFailure: (Throwable) -> Unit = {}
+    ) {
+        getAdSpaceResult(splashId, onSuccess, onFailure)
+    }
+
+    fun getBannerAdSpaceResult(
+        bannerId: String,
+        onSuccess: (AdSpaceResult) -> Unit,
+        onFailure: (Throwable) -> Unit = {}
+    ) {
+        getAdSpaceResult(bannerId, onSuccess, onFailure)
+    }
+
+    fun getInsertAdSpaceResult(
+        insertId: String,
+        onSuccess: (AdSpaceResult) -> Unit,
+        onFailure: (Throwable) -> Unit = {}
+    ) {
+        getAdSpaceResult(insertId, onSuccess, onFailure)
+    }
+
+    fun getRewardAdSpaceResult(
+        rewardId: String,
+        onSuccess: (AdSpaceResult) -> Unit,
+        onFailure: (Throwable) -> Unit = {}
+    ) {
+        getAdSpaceResult(rewardId, onSuccess, onFailure)
+    }
+
+    private fun getAdSpaceResult(
+        adSpaceId: String,
+        onSuccess: (AdSpaceResult) -> Unit,
+        onFailure: (Throwable) -> Unit
+    ) {
+        if (adSpaceId.isBlank()) {
+            val error = IllegalArgumentException("adSpaceId 不能为空")
+            Log.e(TAG, "getAdSpaceResult: adSpaceId is blank")
+            onFailure(error)
+            return
+        }
+
+        Log.d(TAG, "getAdSpaceResult start, adSpaceId=$adSpaceId")
+
+        FreelyQuery<Adspace>()
+            .cachePolicy(CachePolicy.NETWORK_ELSE_CACHE)
+            .include("adcontent")
+            .getObject(adSpaceId)
+            .onSuccess { adSpace ->
+                val enableSelfAd = adSpace.enableSelfAd != false
+                val adList = adSpace.adcontent.getItems().toMutableList()
+                Log.d(
+                    TAG,
+                    "getAdSpaceResult success, adSpaceId=$adSpaceId, enableSelfAd=$enableSelfAd, adCount=${adList.size}, ads=${summarizeAds(adList)}"
+                )
+                onSuccess(
+                    AdSpaceResult(
+                        enableSelfAd = enableSelfAd,
+                        ads = adList
+                    )
+                )
+            }
+            .onFailure { error ->
+                Log.e(TAG, "getAdSpaceResult failed, adSpaceId=$adSpaceId", error)
+                onFailure(error)
+            }
     }
 
     private fun getAdMutableList(

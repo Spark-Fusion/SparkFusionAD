@@ -66,6 +66,9 @@ class StartActivity : AppCompatActivity(){
         SparkFusionAd.loadSFSplashAd(
             context = this,
             adId = Common.POS_ID_Splash,
+            loadThirdPartyAd = {
+                //加载其他广告方法
+            },
             listener = SparkFusionAdLoadListener(
                 onAdLoadSuccess = {
                     SparkFusionAd.showSFSplashAd(

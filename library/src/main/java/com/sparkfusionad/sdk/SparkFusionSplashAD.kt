@@ -1,6 +1,8 @@
 package com.sparkfusionad.sdk
 
 import android.content.Context
+import android.animation.ObjectAnimator
+import android.animation.ValueAnimator
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.ImageView
@@ -34,7 +36,20 @@ internal class SparkFusionSplashAD {
             setOnClickListener { onSkipClick() }
         }
         view.findViewById<View>(R.id.actionContainer).setOnClickListener { onActionClick() }
+        startShakeAnimation(view.findViewById(R.id.shakeIcon))
 
         return view
+    }
+
+    private fun startShakeAnimation(imageView: ImageView?) {
+        if (imageView == null) {
+            return
+        }
+        ObjectAnimator.ofFloat(imageView, View.TRANSLATION_X, 0f, -12f, 12f, -10f, 10f, 0f).apply {
+            duration = 600L
+            repeatCount = ValueAnimator.INFINITE
+            repeatMode = ValueAnimator.RESTART
+            start()
+        }
     }
 }

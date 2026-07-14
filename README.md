@@ -176,6 +176,9 @@ if (SdkManager.initAd()) {
 SparkFusionAd.loadSFSplashAd(
     context = context,
     adId = "开屏广告位id",
+    loadThirdPartyAd = {
+        // 加载第三方广告
+    },
     listener = SparkFusionAdLoadListener(
         onAdLoadSuccess = {
             val splashContainer = findViewById<ViewGroup>(R.id.splash_container)
@@ -252,19 +255,26 @@ SparkFusionAd.loadSFInterstitialAd(
 #### 激励视频广告
 
 ```kotlin
-SparkFusionAd.showSFVideoAd(
-    activity = this,
-    showAd = true,
-    onAdLoadSuccess = {
-        // 广告加载成功
-    },
-    onAdLoadError = {
-        // 广告加载失败
-    },
-    onAdClose = {
-        // 广告关闭后的回调
-        // 发放奖励
-    }
+SparkFusionAd.loadSFVideoAd(
+    context = this,
+    adId = "激励视频广告位id",
+    listener = SparkFusionAdLoadListener(
+        onAdLoadSuccess = {
+            SparkFusionAd.showSFVideoAd(
+                activity = this,
+                listener = SparkFusionRewardAdShowListener(
+                    onAdShowSuccess = {},
+                    onAdShowFailure = {},
+                    onAdClick = {},
+                    onAdClose = {},
+                    onReward = {
+                        // 发放奖励
+                    }
+                )
+            )
+        },
+        onAdLoadFailure = {}
+    )
 )
 ```
 
@@ -284,7 +294,7 @@ SparkFusionAd.showSFVideoAd(
 
 ### 开屏广告
 
-#### `loadSFSplashAd(context: Context, adId: String, listener: SparkFusionAdLoadListener)`
+#### `loadSFSplashAd(context: Context, adId: String, thirdPartyLoader: SparkFusionThirdPartyAdLoader? = null, listener: SparkFusionAdLoadListener)`
 
 加载开屏广告。
 
@@ -354,16 +364,21 @@ SparkFusionAd.showSFVideoAd(
 
 ### 激励视频广告
 
-#### `showSFVideoAd(activity: Activity, showAd: Boolean = true, onAdLoadSuccess: () -> Unit = {}, onAdLoadError: () -> Unit = {}, onAdClose: () -> Unit = {})`
+#### `loadSFVideoAd(context: Context, adId: String, listener: SparkFusionAdLoadListener)`
+
+加载激励视频广告。
+
+**参数：**
+- `adId`: 激励视频广告位 id
+- `listener`: 加载成功/失败监听
+
+#### `showSFVideoAd(activity: Activity, listener: SparkFusionRewardAdShowListener)`
 
 显示激励视频广告。
 
 **参数：**
 - `activity`: Activity 上下文
-- `showAd`: 是否显示广告（默认值为 true）
-- `onAdLoadSuccess`: 广告加载成功回调
-- `onAdLoadError`: 广告加载失败回调
-- `onAdClose`: 广告关闭后的回调（默认显示 5 秒后自动关闭）
+- `listener`: 展示成功、展示失败、点击、关闭、奖励监听
 
 ---
 

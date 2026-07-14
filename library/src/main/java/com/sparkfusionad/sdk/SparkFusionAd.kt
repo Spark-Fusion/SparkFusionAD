@@ -20,7 +20,6 @@ import android.view.Gravity
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.FrameLayout
-import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import com.sparkfusionad.sdk.freelybase.SparkFusingAdDataRep
@@ -34,6 +33,8 @@ object SparkFusionAd {
     private const val TAG = "SparkFusionAd"
     private const val SHAKE_THRESHOLD_GRAVITY = 2.2f
     private const val SHAKE_DEBOUNCE_MILLIS = 1000L
+    private const val REWARD_VIDEO_DURATION_SECONDS = 30
+    private const val REWARD_EARNED_SECONDS = 20
 
     private var isInitAd = false
     private var splashTimer: CountDownTimer? = null
@@ -45,10 +46,45 @@ object SparkFusionAd {
     private var currentSplashAd: LoadedAd? = null
     private var currentBannerAd: LoadedAd? = null
     private var currentInsertAd: LoadedAd? = null
+    private var currentRewardAd: LoadedRewardAd? = null
+
+    private enum class AdSource {
+        SELF,
+        THIRD_PARTY
+    }
+
+    private var splashAdSource: AdSource = AdSource.SELF
+    private var bannerAdSource: AdSource = AdSource.SELF
+    private var insertAdSource: AdSource = AdSource.SELF
+    private var rewardAdSource: AdSource = AdSource.SELF
+
+    private var thirdPartyAdLoader: SparkFusionThirdPartyAdLoader? = null
 
     private val splashRenderer = SparkFusionSplashAD()
     private val bannerRenderer = SparkFusionBannerAD()
     private val insertRenderer = SparkFusionInsertAD()
+
+    private var pendingRewardSession: RewardVideoSession? = null
+
+    internal data class RewardVideoSession(
+        val adData: SparkFusionAdData,
+        val videoUrl: String,
+        val durationSeconds: Int,
+        val rewardEligibleSeconds: Int,
+        val onReward: () -> Unit,
+        val onClose: () -> Unit,
+        val onClick: () -> Unit
+    )
+
+    internal fun consumeRewardSession(): RewardVideoSession? {
+        val session = pendingRewardSession
+        pendingRewardSession = null
+        return session
+    }
+
+    internal fun performRewardAdClick(context: Context, adData: SparkFusionAdData) {
+        handleAdClick(context, adData)
+    }
 
     fun initSparkFusionAd(context: Context, appKey: String) {
         Freelybase.initialize(context.applicationContext, appKey, false)
@@ -59,27 +95,71 @@ object SparkFusionAd {
         Toast.makeText(context, "initSparkFusionAd success", Toast.LENGTH_SHORT).show()
     }
 
+    fun loadThirdPartyAd(loader: SparkFusionThirdPartyAdLoader) {
+        thirdPartyAdLoader = loader
+    }
+
     fun loadSFSplashAd(
         context: Context,
         adId: String,
+        loadThirdPartyAd: (() -> Unit)? = null,
         listener: SparkFusionAdLoadListener = SparkFusionAdLoadListener()
     ) {
         if (!checkInit(context, listener.onAdLoadFailure)) {
             return
         }
 
-        loadAd(
-            adType = "splash",
-            adId = adId,
-            onSuccess = { loadedAd ->
-                currentSplashAd = loadedAd
-                Log.d(TAG, "loadSFSplashAd success: ${loadedAd.adData.appName}")
-                listener.onAdLoadSuccess()
+        SparkFusingAdDataRep.getSplashAdSpaceResult(
+            splashId = adId,
+            onSuccess = { result ->
+                if (!result.enableSelfAd) {
+                    loadThirdPartyAd?.invoke()
+                    val loader = thirdPartyAdLoader
+                    if (loader == null) {
+                        listener.onAdLoadFailure(IllegalStateException("未设置第三方广告加载器"))
+                        return@getSplashAdSpaceResult
+                    }
+                    loader.loadSplashAd(
+                        context = context,
+                        adId = adId,
+                        listener = SparkFusionAdLoadListener(
+                            onAdLoadSuccess = {
+                                splashAdSource = AdSource.THIRD_PARTY
+                                currentSplashAd = null
+                                listener.onAdLoadSuccess()
+                            },
+                            onAdLoadFailure = { error ->
+                                splashAdSource = AdSource.SELF
+                                currentSplashAd = null
+                                listener.onAdLoadFailure(error)
+                            }
+                        )
+                    )
+                    return@getSplashAdSpaceResult
+                }
+
+                splashAdSource = AdSource.SELF
+                currentSplashAd = null
+                loadAd(
+                    adType = "splash",
+                    adId = adId,
+                    onSuccess = { loadedAd ->
+                        splashAdSource = AdSource.SELF
+                        currentSplashAd = loadedAd
+                        Log.d(TAG, "loadSFSplashAd success: ${loadedAd.adData.appName}")
+                        listener.onAdLoadSuccess()
+                    },
+                    onFailure = { error ->
+                        splashAdSource = AdSource.SELF
+                        currentSplashAd = null
+                        listener.onAdLoadFailure(error)
+                    },
+                    fetch = { _, onSuccess, _ ->
+                        onSuccess(result.ads)
+                    }
+                )
             },
-            onFailure = listener.onAdLoadFailure,
-            fetch = { targetId, onSuccess, onFailure ->
-                SparkFusingAdDataRep.getSplashAdMutableList(targetId, onSuccess, onFailure)
-            }
+            onFailure = listener.onAdLoadFailure
         )
     }
 
@@ -92,18 +172,56 @@ object SparkFusionAd {
             return
         }
 
-        loadAd(
-            adType = "banner",
-            adId = adId,
-            onSuccess = { loadedAd ->
-                currentBannerAd = loadedAd
-                Log.d(TAG, "loadSFBannerAd success: ${loadedAd.adData.appName}")
-                listener.onAdLoadSuccess()
+        SparkFusingAdDataRep.getBannerAdSpaceResult(
+            bannerId = adId,
+            onSuccess = { result ->
+                if (!result.enableSelfAd) {
+                    val loader = thirdPartyAdLoader
+                    if (loader == null) {
+                        listener.onAdLoadFailure(IllegalStateException("未设置第三方广告加载器"))
+                        return@getBannerAdSpaceResult
+                    }
+                    loader.loadBannerAd(
+                        context = context,
+                        adId = adId,
+                        listener = SparkFusionAdLoadListener(
+                            onAdLoadSuccess = {
+                                bannerAdSource = AdSource.THIRD_PARTY
+                                currentBannerAd = null
+                                listener.onAdLoadSuccess()
+                            },
+                            onAdLoadFailure = { error ->
+                                bannerAdSource = AdSource.SELF
+                                currentBannerAd = null
+                                listener.onAdLoadFailure(error)
+                            }
+                        )
+                    )
+                    return@getBannerAdSpaceResult
+                }
+
+                bannerAdSource = AdSource.SELF
+                currentBannerAd = null
+                loadAd(
+                    adType = "banner",
+                    adId = adId,
+                    onSuccess = { loadedAd ->
+                        bannerAdSource = AdSource.SELF
+                        currentBannerAd = loadedAd
+                        Log.d(TAG, "loadSFBannerAd success: ${loadedAd.adData.appName}")
+                        listener.onAdLoadSuccess()
+                    },
+                    onFailure = { error ->
+                        bannerAdSource = AdSource.SELF
+                        currentBannerAd = null
+                        listener.onAdLoadFailure(error)
+                    },
+                    fetch = { _, onSuccess, _ ->
+                        onSuccess(result.ads)
+                    }
+                )
             },
-            onFailure = listener.onAdLoadFailure,
-            fetch = { targetId, onSuccess, onFailure ->
-                SparkFusingAdDataRep.getBannerAdMutableList(targetId, onSuccess, onFailure)
-            }
+            onFailure = listener.onAdLoadFailure
         )
     }
 
@@ -116,17 +234,132 @@ object SparkFusionAd {
             return
         }
 
-        loadAd(
-            adType = "insert",
-            adId = adId,
-            onSuccess = { loadedAd ->
-                currentInsertAd = loadedAd
-                Log.d(TAG, "loadSFInterstitialAd success: ${loadedAd.adData.appName}")
+        SparkFusingAdDataRep.getInsertAdSpaceResult(
+            insertId = adId,
+            onSuccess = { result ->
+                if (!result.enableSelfAd) {
+                    val loader = thirdPartyAdLoader
+                    if (loader == null) {
+                        listener.onAdLoadFailure(IllegalStateException("未设置第三方广告加载器"))
+                        return@getInsertAdSpaceResult
+                    }
+                    loader.loadInterstitialAd(
+                        context = context,
+                        adId = adId,
+                        listener = SparkFusionAdLoadListener(
+                            onAdLoadSuccess = {
+                                insertAdSource = AdSource.THIRD_PARTY
+                                currentInsertAd = null
+                                listener.onAdLoadSuccess()
+                            },
+                            onAdLoadFailure = { error ->
+                                insertAdSource = AdSource.SELF
+                                currentInsertAd = null
+                                listener.onAdLoadFailure(error)
+                            }
+                        )
+                    )
+                    return@getInsertAdSpaceResult
+                }
+
+                insertAdSource = AdSource.SELF
+                currentInsertAd = null
+                loadAd(
+                    adType = "insert",
+                    adId = adId,
+                    onSuccess = { loadedAd ->
+                        insertAdSource = AdSource.SELF
+                        currentInsertAd = loadedAd
+                        Log.d(TAG, "loadSFInterstitialAd success: ${loadedAd.adData.appName}")
+                        listener.onAdLoadSuccess()
+                    },
+                    onFailure = { error ->
+                        insertAdSource = AdSource.SELF
+                        currentInsertAd = null
+                        listener.onAdLoadFailure(error)
+                    },
+                    fetch = { _, onSuccess, _ ->
+                        onSuccess(result.ads)
+                    }
+                )
+            },
+            onFailure = listener.onAdLoadFailure
+        )
+    }
+
+    fun loadSFVideoAd(
+        context: Context,
+        adId: String,
+        listener: SparkFusionAdLoadListener = SparkFusionAdLoadListener()
+    ) {
+        if (!checkInit(context, listener.onAdLoadFailure)) {
+            return
+        }
+        if (adId.isBlank()) {
+            listener.onAdLoadFailure(IllegalArgumentException("广告 id 不能为空"))
+            return
+        }
+
+        SparkFusingAdDataRep.getRewardAdSpaceResult(
+            rewardId = adId,
+            onSuccess = { result ->
+                if (!result.enableSelfAd) {
+                    val loader = thirdPartyAdLoader
+                    if (loader == null) {
+                        listener.onAdLoadFailure(IllegalStateException("未设置第三方广告加载器"))
+                        return@getRewardAdSpaceResult
+                    }
+                    loader.loadRewardAd(
+                        context = context,
+                        adId = adId,
+                        listener = SparkFusionAdLoadListener(
+                            onAdLoadSuccess = {
+                                rewardAdSource = AdSource.THIRD_PARTY
+                                currentRewardAd = null
+                                listener.onAdLoadSuccess()
+                            },
+                            onAdLoadFailure = { error ->
+                                rewardAdSource = AdSource.SELF
+                                currentRewardAd = null
+                                listener.onAdLoadFailure(error)
+                            }
+                        )
+                    )
+                    return@getRewardAdSpaceResult
+                }
+
+                rewardAdSource = AdSource.SELF
+                currentRewardAd = null
+
+                val adList = result.ads
+                if (adList.isEmpty()) {
+                    listener.onAdLoadFailure(IllegalStateException("激励视频广告位没有可展示的数据"))
+                    return@getRewardAdSpaceResult
+                }
+
+                val selectedRawAd = selectRawAdData(adList)
+                if (selectedRawAd == null) {
+                    listener.onAdLoadFailure(IllegalStateException("激励视频广告位没有权重大于0的可展示广告"))
+                    return@getRewardAdSpaceResult
+                }
+
+                val videoUrl = selectedRawAd.video?.url?.takeIf { it.isNotBlank() }
+                if (videoUrl.isNullOrBlank()) {
+                    listener.onAdLoadFailure(IllegalStateException("激励视频广告视频地址为空"))
+                    return@getRewardAdSpaceResult
+                }
+
+                val adData = mapToSparkFusionAdData(selectedRawAd)
+                rewardAdSource = AdSource.SELF
+                currentRewardAd = LoadedRewardAd(
+                    adId = adId,
+                    adData = adData,
+                    videoUrl = videoUrl
+                )
                 listener.onAdLoadSuccess()
             },
-            onFailure = listener.onAdLoadFailure,
-            fetch = { targetId, onSuccess, onFailure ->
-                SparkFusingAdDataRep.getInsertAdMutableList(targetId, onSuccess, onFailure)
+            onFailure = { error ->
+                listener.onAdLoadFailure(error)
             }
         )
     }
@@ -135,10 +368,20 @@ object SparkFusionAd {
         view: ViewGroup,
         listener: SparkFusionAdShowListener = SparkFusionAdShowListener()
     ) {
-        val loadedAd = currentSplashAd
         if (!checkInit(view.context, listener.onAdShowFailure)) {
             return
         }
+        if (splashAdSource == AdSource.THIRD_PARTY) {
+            val loader = thirdPartyAdLoader
+            if (loader == null) {
+                listener.onAdShowFailure(IllegalStateException("未设置第三方广告加载器"))
+                return
+            }
+            loader.showSplashAd(view, listener)
+            return
+        }
+
+        val loadedAd = currentSplashAd
         if (loadedAd == null) {
             listener.onAdShowFailure(IllegalStateException("开屏广告未加载，请先调用 loadSFSplashAd"))
             return
@@ -207,10 +450,20 @@ object SparkFusionAd {
         view: ViewGroup,
         listener: SparkFusionAdShowListener = SparkFusionAdShowListener()
     ) {
-        val loadedAd = currentBannerAd
         if (!checkInit(view.context, listener.onAdShowFailure)) {
             return
         }
+        if (bannerAdSource == AdSource.THIRD_PARTY) {
+            val loader = thirdPartyAdLoader
+            if (loader == null) {
+                listener.onAdShowFailure(IllegalStateException("未设置第三方广告加载器"))
+                return
+            }
+            loader.showBannerAd(view, listener)
+            return
+        }
+
+        val loadedAd = currentBannerAd
         if (loadedAd == null) {
             listener.onAdShowFailure(IllegalStateException("Banner 广告未加载，请先调用 loadSFBannerAd"))
             return
@@ -244,10 +497,20 @@ object SparkFusionAd {
         activity: Activity,
         listener: SparkFusionAdShowListener = SparkFusionAdShowListener()
     ) {
-        val loadedAd = currentInsertAd
         if (!checkInit(activity, listener.onAdShowFailure)) {
             return
         }
+        if (insertAdSource == AdSource.THIRD_PARTY) {
+            val loader = thirdPartyAdLoader
+            if (loader == null) {
+                listener.onAdShowFailure(IllegalStateException("未设置第三方广告加载器"))
+                return
+            }
+            loader.showInterstitialAd(activity, listener)
+            return
+        }
+
+        val loadedAd = currentInsertAd
         if (loadedAd == null) {
             listener.onAdShowFailure(IllegalStateException("插屏广告未加载，请先调用 loadSFInterstitialAd"))
             return
@@ -315,82 +578,82 @@ object SparkFusionAd {
 
     fun showSFVideoAd(
         activity: Activity,
-        showAd: Boolean = true,
-        onAdLoadSuccess: () -> Unit = {},
-        onAdLoadError: () -> Unit = {},
-        onAdClose: () -> Unit = {}
+        listener: SparkFusionRewardAdShowListener = SparkFusionRewardAdShowListener()
     ) {
-        if (!checkInit(activity)) {
-            onAdLoadError()
+        if (!checkInit(activity, listener.onAdShowFailure)) {
+            return
+        }
+        if (rewardAdSource == AdSource.THIRD_PARTY) {
+            val loader = thirdPartyAdLoader
+            if (loader == null) {
+                listener.onAdShowFailure(IllegalStateException("未设置第三方广告加载器"))
+                return
+            }
+            loader.showRewardAd(activity, listener)
             return
         }
 
-        Handler(Looper.getMainLooper()).postDelayed({
-            if (Random.nextInt(10) < 9) {
-                onAdLoadSuccess()
-                Log.d(TAG, "showSFVideoAd: 广告加载成功")
+        val loadedAd = currentRewardAd
+        if (loadedAd == null) {
+            listener.onAdShowFailure(IllegalStateException("激励视频广告未加载，请先调用 loadSFVideoAd"))
+            return
+        }
 
-                if (!showAd) {
-                    onAdClose()
-                    return@postDelayed
-                }
-
-                val dialogView = LinearLayout(activity).apply {
-                    orientation = LinearLayout.VERTICAL
-                    gravity = Gravity.CENTER
-                    layoutParams = ViewGroup.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT
-                    )
-                    setBackgroundColor(Color.parseColor("#9B59B6"))
-                    setPadding(40, 40, 40, 40)
-                }
-
-                val titleView = TextView(activity).apply {
-                    text = "激励视频广告"
-                    textSize = 24f
-                    setTextColor(Color.WHITE)
-                    gravity = Gravity.CENTER
-                }
-
-                val contentView = TextView(activity).apply {
-                    text = "观看完整视频可获得奖励！"
-                    textSize = 18f
-                    setTextColor(Color.WHITE)
-                    gravity = Gravity.CENTER
-                }
-
-                dialogView.addView(titleView)
-                dialogView.addView(contentView)
-
-                val dialog = AlertDialog.Builder(activity)
-                    .setView(dialogView)
-                    .setCancelable(true)
-                    .create()
-
-                dialog.window?.apply {
-                    setLayout(
-                        WindowManager.LayoutParams.MATCH_PARENT,
-                        WindowManager.LayoutParams.MATCH_PARENT
-                    )
-                    setBackgroundDrawableResource(android.R.color.transparent)
-                }
-
-                dialog.setOnDismissListener { onAdClose() }
-                dialog.show()
-
-                Handler(Looper.getMainLooper()).postDelayed({
-                    if (dialog.isShowing) {
-                        dialog.dismiss()
-                    }
-                }, 5000)
-
-                Log.d(TAG, "showSFVideoAd success")
-            } else {
-                onAdLoadError()
-                Log.d(TAG, "showSFVideoAd: 广告加载失败")
+        pendingRewardSession = RewardVideoSession(
+            adData = loadedAd.adData,
+            videoUrl = loadedAd.videoUrl,
+            durationSeconds = REWARD_VIDEO_DURATION_SECONDS,
+            rewardEligibleSeconds = REWARD_EARNED_SECONDS,
+            onReward = listener.onReward,
+            onClose = listener.onAdClose,
+            onClick = {
+                listener.onAdClick()
+                handleAdClick(activity, loadedAd.adData)
             }
-        }, 500)
+        )
+
+        try {
+            activity.startActivity(Intent(activity, SparkFusionRewardVideoActivity::class.java))
+            listener.onAdShowSuccess()
+        } catch (e: Exception) {
+            pendingRewardSession = null
+            listener.onAdShowFailure(e)
+        }
+    }
+
+    fun showSFVideoAd(
+        activity: Activity,
+        adId: String,
+        showAd: Boolean = true,
+        onAdLoadSuccess: () -> Unit = {},
+        onAdLoadError: () -> Unit = {},
+        onAdClose: () -> Unit = {},
+        onReward: () -> Unit = {}
+    ) {
+        loadSFVideoAd(
+            context = activity,
+            adId = adId,
+            listener = SparkFusionAdLoadListener(
+                onAdLoadSuccess = {
+                    onAdLoadSuccess()
+                    if (!showAd) {
+                        onAdClose()
+                        return@SparkFusionAdLoadListener
+                    }
+                    showSFVideoAd(
+                        activity = activity,
+                        listener = SparkFusionRewardAdShowListener(
+                            onAdShowSuccess = {},
+                            onAdShowFailure = { onAdLoadError() },
+                            onAdClick = {},
+                            onAdClose = onAdClose,
+                            onReward = onReward
+                        )
+                    )
+                },
+                onAdLoadFailure = { onAdLoadError() }
+            )
+        )
     }
 
     fun removeSFBannerAd(view: ViewGroup) {
@@ -469,6 +732,11 @@ object SparkFusionAd {
         currentSplashAd = null
         currentBannerAd = null
         currentInsertAd = null
+        currentRewardAd = null
+        splashAdSource = AdSource.SELF
+        bannerAdSource = AdSource.SELF
+        insertAdSource = AdSource.SELF
+        rewardAdSource = AdSource.SELF
     }
 
     private fun dismissSplash(view: ViewGroup, onAdClose: () -> Unit) {
@@ -582,6 +850,11 @@ object SparkFusionAd {
     }
 
     private fun selectAdData(adList: List<Addata>): SparkFusionAdData? {
+        val selected = selectRawAdData(adList) ?: return null
+        return mapToSparkFusionAdData(selected)
+    }
+
+    private fun selectRawAdData(adList: List<Addata>): Addata? {
         val weightedAds = adList
             .map { it to it.weight.coerceIn(0, 100) }
             .filter { (_, weight) -> weight > 0 }
@@ -611,7 +884,7 @@ object SparkFusionAd {
                     TAG,
                     "selectAdData hit=$originalHit, selectedApp=${ad.appname.orEmpty()}, selectedWeight=$weight"
                 )
-                return mapToSparkFusionAdData(ad)
+                return ad
             }
         }
 
@@ -619,7 +892,7 @@ object SparkFusionAd {
             TAG,
             "selectAdData fallback selectedApp=${weightedAds.last().first.appname.orEmpty()}"
         )
-        return mapToSparkFusionAdData(weightedAds.last().first)
+        return weightedAds.last().first
     }
 
     private fun mapToSparkFusionAdData(adData: Addata): SparkFusionAdData {
@@ -644,6 +917,12 @@ object SparkFusionAd {
     private data class LoadedAd(
         val adId: String,
         val adData: SparkFusionAdData
+    )
+
+    private data class LoadedRewardAd(
+        val adId: String,
+        val adData: SparkFusionAdData,
+        val videoUrl: String
     )
 
     private fun summarizeAds(adList: List<Addata>): String {
