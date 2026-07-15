@@ -12,6 +12,7 @@ import io.freelybase.android.Relation
 class Adspace: FreelyObject() {
     var name: String? = null//名字
     var type: String?=null//广告类型
+    var enable: Boolean?=null//是否启用广告
     var enableSelfAd: Boolean?=null//true加载自己的广告，false加载第三方的广告
     @Pointer
     var game:Game?=null//

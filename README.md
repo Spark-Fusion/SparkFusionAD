@@ -294,13 +294,14 @@ SparkFusionAd.loadSFVideoAd(
 
 ### 开屏广告
 
-#### `loadSFSplashAd(context: Context, adId: String, thirdPartyLoader: SparkFusionThirdPartyAdLoader? = null, listener: SparkFusionAdLoadListener)`
+#### `loadSFSplashAd(context: Context, adId: String, loadThirdPartyAd: (() -> Unit)? = null, listener: SparkFusionAdLoadListener)`
 
 加载开屏广告。
 
 **参数：**
 - `context`: 上下文
 - `adId`: 开屏广告位 id
+- `loadThirdPartyAd`: 当广告位 `enableSelfAd=false` 时回调，由接入方自行加载/展示第三方广告
 - `listener`: 加载成功/失败监听
 
 #### `showSFSplashAd(view: ViewGroup, listener: SparkFusionAdShowListener)`
@@ -315,7 +316,7 @@ SparkFusionAd.loadSFVideoAd(
 
 ### Banner 广告
 
-#### `loadSFBannerAd(context: Context, adId: String, listener: SparkFusionAdLoadListener)`
+#### `loadSFBannerAd(context: Context, adId: String, loadThirdPartyAd: (() -> Unit)? = null, listener: SparkFusionAdLoadListener)`
 
 加载 Banner 广告。
 
@@ -343,7 +344,7 @@ SparkFusionAd.loadSFVideoAd(
 
 ### 插屏广告
 
-#### `loadSFInterstitialAd(context: Context, adId: String, listener: SparkFusionAdLoadListener)`
+#### `loadSFInterstitialAd(context: Context, adId: String, loadThirdPartyAd: (() -> Unit)? = null, listener: SparkFusionAdLoadListener)`
 
 加载插屏广告。
 
@@ -364,7 +365,7 @@ SparkFusionAd.loadSFVideoAd(
 
 ### 激励视频广告
 
-#### `loadSFVideoAd(context: Context, adId: String, listener: SparkFusionAdLoadListener)`
+#### `loadSFVideoAd(context: Context, adId: String, loadThirdPartyAd: (() -> Unit)? = null, listener: SparkFusionAdLoadListener)`
 
 加载激励视频广告。
 

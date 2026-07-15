@@ -3,6 +3,8 @@ package com.sparkfusionad.app
 import android.content.Intent
 import android.os.Bundle
 import android.os.CountDownTimer
+import android.util.Log
+import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import com.sparkfusionad.app.application.SdkManager
@@ -68,20 +70,37 @@ class StartActivity : AppCompatActivity(){
             adId = Common.POS_ID_Splash,
             loadThirdPartyAd = {
                 //加载其他广告方法
+                Toast.makeText(this, "加载第三方开屏广告", Toast.LENGTH_SHORT).show()
+                Log.d("SparkFusionAd", "加载第三方开屏广告")
+                countdown()
             },
             listener = SparkFusionAdLoadListener(
                 onAdLoadSuccess = {
+                    Log.d("SparkFusionAd", "开屏广告加载成功")
                     SparkFusionAd.showSFSplashAd(
                         binding.fl,
                         SparkFusionAdShowListener(
-                            onAdShowSuccess = {},
-                            onAdShowFailure = { countdown() },
-                            onAdClick = {},
-                            onAdClose = { startActivity() }
+                            onAdShowSuccess = {
+                                Log.d("SparkFusionAd", "开屏广告显示成功")
+                            },
+                            onAdShowFailure = {
+                                countdown()
+                                Log.d("SparkFusionAd", "开屏广告显示失败")
+                            },
+                            onAdClick = {
+                                Log.d("SparkFusionAd", "开屏广告被点击")
+                            },
+                            onAdClose = {
+                                startActivity()
+                                Log.d("SparkFusionAd", "开屏广告被关闭")
+                            }
                         )
                     )
                 },
-                onAdLoadFailure = { countdown() }
+                onAdLoadFailure = {
+                    countdown()
+                    Log.d("SparkFusionAd", "开屏广告加载失败")
+                }
             )
         )
     }

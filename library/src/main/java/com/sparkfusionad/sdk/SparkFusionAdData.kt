@@ -8,8 +8,11 @@ internal data class SparkFusionAdData(
     val callToAction: String,
     val versionName: String,
     val clickUrl: String? = null,
+    val isDownload: Boolean = false,
+    val applicationId: String? = null,
     val appLogoUrl: String? = null,
     val promoImageUrl: String? = null,
+    val themeColor: String? = null,
     @DrawableRes val appLogoRes: Int,
     @DrawableRes val promoImageRes: Int,
     val splashDurationSeconds: Int = 5

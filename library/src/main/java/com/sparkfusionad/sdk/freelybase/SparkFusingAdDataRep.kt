@@ -15,6 +15,7 @@ object SparkFusingAdDataRep {
     private const val TAG = "SparkFusingAdDataRep"
 
     data class AdSpaceResult(
+        val enable: Boolean,
         val enableSelfAd: Boolean,
         val ads: MutableList<Addata>
     )
@@ -105,14 +106,16 @@ object SparkFusingAdDataRep {
             .include("adcontent")
             .getObject(adSpaceId)
             .onSuccess { adSpace ->
+                val enable = adSpace.enable == true
                 val enableSelfAd = adSpace.enableSelfAd != false
                 val adList = adSpace.adcontent.getItems().toMutableList()
                 Log.d(
                     TAG,
-                    "getAdSpaceResult success, adSpaceId=$adSpaceId, enableSelfAd=$enableSelfAd, adCount=${adList.size}, ads=${summarizeAds(adList)}"
+                    "getAdSpaceResult success, adSpaceId=$adSpaceId, enable=$enable, enableSelfAd=$enableSelfAd, adCount=${adList.size}, ads=${summarizeAds(adList)}"
                 )
                 onSuccess(
                     AdSpaceResult(
+                        enable = enable,
                         enableSelfAd = enableSelfAd,
                         ads = adList
                     )

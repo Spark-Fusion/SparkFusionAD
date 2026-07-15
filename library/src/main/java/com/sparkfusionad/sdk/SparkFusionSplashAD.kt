@@ -3,6 +3,7 @@ package com.sparkfusionad.sdk
 import android.content.Context
 import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
+import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.ImageView
@@ -18,6 +19,7 @@ internal class SparkFusionSplashAD {
     ): View {
         val view = LayoutInflater.from(context).inflate(R.layout.splash_ad_view, null, false)
         view.setOnClickListener { onActionClick() }
+        applyThemeColor(view, adData.themeColor)
 
         SparkFusionImageLoader.load(
             imageView = view.findViewById(R.id.applogo),
@@ -39,6 +41,16 @@ internal class SparkFusionSplashAD {
         startShakeAnimation(view.findViewById(R.id.shakeIcon))
 
         return view
+    }
+
+    private fun applyThemeColor(view: View, themeColor: String?) {
+        val raw = themeColor?.trim().orEmpty()
+        if (raw.isBlank()) {
+            return
+        }
+        val normalized = if (raw.startsWith("#")) raw else "#$raw"
+        val color = runCatching { Color.parseColor(normalized) }.getOrNull() ?: return
+        view.setBackgroundColor(color)
     }
 
     private fun startShakeAnimation(imageView: ImageView?) {
