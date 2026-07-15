@@ -55,7 +55,7 @@ dependencies {
     implementation("com.google.code.gson:gson:2.8.5")
 }
 group = "com.github.spark-fusion"
-version = "1.0.1"
+version = "1.0.2"
 
 afterEvaluate {
     publishing {
@@ -64,7 +64,7 @@ afterEvaluate {
                 from(components["release"])
                 groupId = "com.sparkfusionad.sdk"
                 artifactId = "SparkFusionAd"
-                version = "1.0.1"
+                version = "1.0.2"
             }
         }
     }

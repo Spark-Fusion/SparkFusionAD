@@ -1,5 +1,6 @@
 package com.sparkfusionad.sdk.freelybase.bean
 
+import androidx.annotation.Keep
 import io.freelybase.android.FreelyFile
 import io.freelybase.android.FreelyObject
 
@@ -7,6 +8,7 @@ import io.freelybase.android.FreelyObject
  *作者：daboluo on 2026/7/13 23:38
  *Email:daboluo719@gmail.com
  */
+@Keep
 class Addata: FreelyObject() {
     var appname: String?=null//app名字
     var content:String?=null//内容

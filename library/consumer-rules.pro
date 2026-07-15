@@ -1,0 +1,1 @@
+-keep class com.sparkfusionad.sdk.freelybase.bean.** { *; }
